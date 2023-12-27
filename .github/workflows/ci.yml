@@ -234,6 +234,5 @@ jobs:
           cd ../csharp/ArmoniK.Api.Mock
           nohup dotnet run > /dev/null 2>&1 &
           sleep 10
-          lsof -i:5000
-          lsof -i:5001
+          netstat -tulpn | grep -e '5000' -e '5001'
           cd ../../python
