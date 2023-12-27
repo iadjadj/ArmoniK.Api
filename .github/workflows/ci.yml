@@ -237,4 +237,3 @@ jobs:
           lsof -i:5000
           lsof -i:5001
           cd ../../python
-          python -m pytest tests --cov=armonik --cov-config=.coveragerc --cov-report=term-missing --cov-report xml:coverage.xml --cov-report html:coverage_report
