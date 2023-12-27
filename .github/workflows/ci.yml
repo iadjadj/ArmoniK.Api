@@ -51,21 +51,17 @@ jobs:
       - name: Install ReSharper
         run: |
           dotnet tool install -g JetBrains.ReSharper.GlobalTools --version 2022.2.2
-
       - name: Restore
         run: |
           cd packages/csharp
           dotnet restore ArmoniK.Api.sln
-
       - name: Reformat
         run: |
           cd packages/csharp
           jb cleanupcode ArmoniK.Api.sln
-
       - name: Check Diff
         run: |
           DIFF="$(git diff --name-only)"
-
           if [ -z "$DIFF" ]; then
             echo "OK: Format is clean"
           else
@@ -75,7 +71,6 @@ jobs:
             git diff
             exit 1
           fi
-
   format-cpp:
     name: Format C++
     runs-on: ubuntu-latest
@@ -92,14 +87,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-format
-
       - name: Check Diff
         id: check-diff
         run: |
           cd packages/cpp
           git ls-files *.{c,h,hpp,cpp,cc} | xargs clang-format -style=file:.clang-format -i
           DIFF="$(git diff --name-only)"
-
           if [ -z "$DIFF" ]; then
           echo "OK: Format is clean"
           else
@@ -109,7 +102,6 @@ jobs:
             git diff
             exit 1
           fi
-
       - name: Generate patch
         if: ${{ failure() && steps.check-diff.conclusion == 'failure' }}
         run: |
@@ -231,47 +223,17 @@ jobs:
       - name: Install dependencies
         run: pip install "$(echo pkg/armonik*.whl)[tests]"
 
-      - name: Run tests
-        run: python -m pytest tests --cov=armonik --cov-config=.coveragerc --cov-report=term-missing --cov-report xml:coverage.xml --cov-report html:coverage_report
-
-      - name: Get Cover
-        uses: orgoro/coverage@6d7a2607343d2abeab89ef40b54ec9785134e313
+      - name: Install .NET Core
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3
         with:
-          coverageFile: packages/python/coverage.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
+          dotnet-version: 6.x
 
-      - name: Archive code coverage results html
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
-        with:
-          name: code-coverage-report-html
-          path: packages/python/coverage_report
-
-      - name: Archive code coverage results xml
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3
-        with:
-          name: code-coverage-report-xml
-          path: packages/python/coverage.xml
-
-  build-cpp-packages:
-    strategy:
-      fail-fast: false
-      matrix:
-        type: [tar.gz, deb, rpm]
-    name: Build C++ Packages [${{ matrix.type }}]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
-        with:
-          ref: ${{ github.ref }}
-
-      - name: Build the package
+      - name: Start Mock server
         run: |
-          cd packages/cpp/tools/packaging
-          ./make-${{ matrix.type }}.sh
-      - name: Publish package as artefact
-        uses: actions/upload-artifact@65d862660abb392b8c4a3d1195a2108db131dd05
-        with:
-          if-no-files-found: error
-          path: packages/cpp/tools/packaging/*.${{ matrix.type }}
-          name: libarmonik.${{ matrix.type }}
+          cd ../csharp/ArmoniK.Api.Mock
+          nohup dotnet run > /dev/null 2>&1 &
+          sleep 10
+          lsof -i:5000
+          lsof -i:5001
+          cd ../../python
+          python -m pytest tests --cov=armonik --cov-config=.coveragerc --cov-report=term-missing --cov-report xml:coverage.xml --cov-report html:coverage_report
