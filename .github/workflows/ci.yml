@@ -234,5 +234,7 @@ jobs:
           cd ../csharp/ArmoniK.Api.Mock
           nohup dotnet run > /dev/null 2>&1 &
           sleep 10
-          ss -tulpn | grep -e '5000' -e '5001'
+          sudo ss -tulpn | grep -e '5000' -e '5001'
           cd ../../python
+          echo "check port"
+      
